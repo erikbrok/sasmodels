@@ -1,0 +1,60 @@
+#define INVALID(v) (v.radius<0 || v.length<0)
+
+static double
+form_volume(double radius, double length)
+{
+    return M_PI*radius*radius*length;
+}
+
+static double
+_fq(double qab, double qc, double radius, double length)
+{
+    return sas_2J1x_x(qab*radius) * sas_sinx_x(qc*0.5*length);
+}
+
+static void
+Fq(double q,
+    double *F1,
+    double *F2,
+    double sld,
+    double solvent_sld,
+    double radius,
+    double length)
+{
+    // translate a point in [-1,1] to a point in [0, pi/2]
+    const double zm = M_PI_4;
+    const double zb = M_PI_4;
+
+    double total_F1 = 0.0;
+    double total_F2 = 0.0;
+    for (int i=0; i<GAUSS_N ;i++) {
+        const double theta = GAUSS_Z[i]*zm + zb;
+        double sin_theta, cos_theta; // slots to hold sincos function output
+        // theta (theta,phi) the projection of the cylinder on the detector plane
+        SINCOS(theta , sin_theta, cos_theta);
+        const double form = _fq(q*sin_theta, q*cos_theta, radius, length);
+        total_F1 += GAUSS_W[i] * form * sin_theta;
+        total_F2 += GAUSS_W[i] * form * form * sin_theta;
+    }
+    // translate dx in [-1,1] to dx in [lower,upper]
+    total_F1 *= zm;
+    total_F2 *= zm;
+    const double s = (sld - solvent_sld) * form_volume(radius, length);
+    *F1 = 1e-2 * s * total_F1;
+    *F2 = 1e-4 * s * s * total_F1 * total_F1;
+}
+
+
+
+static double
+Iqac(double qab, double qc,
+    double sld,
+    double solvent_sld,
+    double radius,
+    double length)
+{
+    const double form = _fq(qab, qc, radius, length);
+    const double s = (sld-solvent_sld) * form_volume(radius, length);
+    return 1.0e-4 * square(s * form);
+}
+

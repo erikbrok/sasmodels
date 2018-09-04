@@ -150,9 +150,9 @@ parameters = [["sld", "1e-6/Ang^2", 4, [-inf, inf], "sld",
                "Ellipsoid scattering length density"],
               ["sld_solvent", "1e-6/Ang^2", 1, [-inf, inf], "sld",
                "Solvent scattering length density"],
-              ["radius_polar", "Ang", 20, [0, inf], "volume",
+              ["radius_polarF2", "Ang", 20, [0, inf], "volume",
                "Polar radius"],
-              ["radius_equatorial", "Ang", 400, [0, inf], "volume",
+              ["radius_equatorialF2", "Ang", 400, [0, inf], "volume",
                "Equatorial radius"],
               ["theta", "degrees", 60, [-360, 360], "orientation",
                "ellipsoid axis to beam angle"],
@@ -161,19 +161,19 @@ parameters = [["sld", "1e-6/Ang^2", 4, [-inf, inf], "sld",
              ]
 
 
-source = ["lib/sas_3j1x_x.c", "lib/gauss76.c", "ellipsoid.c"]
+source = ["lib/sas_3j1x_x.c", "lib/gauss76.c", "ellipsoidF2.c"]
 have_Fq = True
 
-def ER(radius_polar, radius_equatorial):
+def ER(radius_polarF2, radius_equatorialF2):
     # see equation (26) in A.Isihara, J.Chem.Phys. 18(1950)1446-1449
-    ee = np.empty_like(radius_polar)
-    idx = radius_polar > radius_equatorial
-    ee[idx] = (radius_polar[idx] ** 2 - radius_equatorial[idx] ** 2) / radius_polar[idx] ** 2
-    idx = radius_polar < radius_equatorial
-    ee[idx] = (radius_equatorial[idx] ** 2 - radius_polar[idx] ** 2) / radius_equatorial[idx] ** 2
-    idx = radius_polar == radius_equatorial
-    ee[idx] = 2 * radius_polar[idx]
-    valid = (radius_polar * radius_equatorial != 0)
+    ee = np.empty_like(radius_polarF2)
+    idx = radius_polarF2 > radius_equatorialF2
+    ee[idx] = (radius_polarF2[idx] ** 2 - radius_equatorialF2[idx] ** 2) / radius_polarF2[idx] ** 2
+    idx = radius_polarF2 < radius_equatorialF2
+    ee[idx] = (radius_equatorialF2[idx] ** 2 - radius_polarF2[idx] ** 2) / radius_equatorialF2[idx] ** 2
+    idx = radius_polarF2 == radius_equatorialF2
+    ee[idx] = 2 * radius_polarF2[idx]
+    valid = (radius_polarF2 * radius_equatorialF2 != 0)
     bd = 1.0 - ee[valid]
     e1 = np.sqrt(ee[valid])
     b1 = 1.0 + np.arcsin(e1) / (e1 * np.sqrt(bd))
@@ -182,7 +182,7 @@ def ER(radius_polar, radius_equatorial):
     delta = 0.75 * b1 * b2
 
     ddd = np.zeros_like(radius_polar)
-    ddd[valid] = 2.0 * (delta + 1.0) * radius_polar * radius_equatorial ** 2
+    ddd[valid] = 2.0 * (delta + 1.0) * radius_polarF2 * radius_equatorialF2 ** 2
     return 0.5 * ddd ** (1.0 / 3.0)
 
 def random():
@@ -198,10 +198,10 @@ def random():
 
 demo = dict(scale=1, background=0,
             sld=6, sld_solvent=1,
-            radius_polar=50, radius_equatorial=30,
+            radius_polarF2=50, radius_equatorialF2=30,
             theta=30, phi=15,
-            radius_polar_pd=.2, radius_polar_pd_n=15,
-            radius_equatorial_pd=.2, radius_equatorial_pd_n=15,
+            radius_polarF2_pd=.2, radius_polarF2_pd_n=15,
+            radius_equatorialF2_pd=.2, radius_equatorialF2_pd_n=15,
             theta_pd=15, theta_pd_n=45,
             phi_pd=15, phi_pd_n=1)
 q = 0.1
@@ -209,7 +209,7 @@ q = 0.1
 qx = q*cos(pi/6.0)
 qy = q*sin(pi/6.0)
 tests = [
-    [{}, 0.05, 54.8525847025],
+    [{}, 0.05, 0.23291238],
     [{'theta':80., 'phi':10.}, (qx, qy), 1.74134670026],
 ]
 del qx, qy  # not necessary to delete, but cleaner
